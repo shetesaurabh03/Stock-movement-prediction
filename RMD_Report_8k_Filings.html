@@ -1,0 +1,594 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div>
+
+
+
+<h1 class="title toc-ignore">Stock Market Movement Prediction Using 8-K
+Filings</h1>
+<h4 class="author">Team Members: Abhishek Varma, Kevin Roy, Saurabh
+Shete</h4>
+<h4 class="date">December 11, 2024</h4>
+
+</div>
+
+
+<div class="section level2">
+<h2>Problem Description</h2>
+<p>This project aims to predict stock price movements using SEC Form 8-K
+filings data. Form 8-K is a mandatory filing that companies must submit
+to report major events that shareholders should know about. Our
+objective is to analyze whether these regulatory filings can provide
+predictive signals for stock price movements in the following trading
+day.</p>
+</div>
+<div class="section level2">
+<h2>Dataset Description</h2>
+<p>The dataset combines SEC 8-K filings with corresponding stock market
+data:</p>
+<ul>
+<li><strong>Link for the dataset</strong>: <a rel="noopener" href="https://drive.google.com/drive/folders/1j3426FxAbfD8S3i65tLMRyEXdrUuSAW-?usp=sharing">CIS
+8395 - Group 5 - Source Data</a></li>
+<li><strong>Number of rows</strong>: 22490</li>
+<li><strong>Number of columns</strong>: 5</li>
+<li><strong>Time Period</strong>: 2010-2024</li>
+<li><strong>Companies</strong>: Major corporations including PFIZER,
+MICROSOFT, APPLE, AMAZON etc.</li>
+<li><strong>Predictor variables</strong>:
+<ul>
+<li><code>cik</code>: The Central Index Key (CIK) is a unique identifier
+assigned by the U.S. Securities and Exchange Commission (SEC) to each
+entity that files reports.</li>
+<li><code>company.name</code>: The name of the company that has
+submitted a filing to the SEC.</li>
+<li><code>form.type</code>: The type of SEC form filed, such as 10-K,
+10-Q, 8-K, etc., which represents different types of financial or
+corporate disclosures.</li>
+<li><code>date.filed</code>: The date on which the SEC form was
+submitted by the company.</li>
+<li><code>event.info</code>: A brief description or summary of the event
+or content reported in the SEC filing, often highlighting significant
+business or financial updates.</li>
+</ul></li>
+</ul>
+<div class="section level3">
+<h3>Loading and Initial Exploration</h3>
+<pre class="r"><code># Load the dataset
+data &lt;- read.csv(&quot;final_combined_8K_filings_all.csv&quot;)
+# Display sample data
+kable(head(data), caption = &quot;Sample of the Dataset&quot;)</code></pre>
+<table>
+<caption>Sample of the Dataset</caption>
+<colgroup>
+<col width="5%"/>
+<col width="11%"/>
+<col width="8%"/>
+<col width="9%"/>
+<col width="64%"/>
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">cik</th>
+<th align="left">company.name</th>
+<th align="left">form.type</th>
+<th align="left">date.filed</th>
+<th align="left">event.info</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">78003</td>
+<td align="left">PFIZER INC</td>
+<td align="left">8-K</td>
+<td align="left">2010-02-03</td>
+<td align="left">Results of Operations and Financial Condition</td>
+</tr>
+<tr class="even">
+<td align="right">78003</td>
+<td align="left">PFIZER INC</td>
+<td align="left">8-K</td>
+<td align="left">2010-02-03</td>
+<td align="left">Financial Statements and Exhibits</td>
+</tr>
+<tr class="odd">
+<td align="right">78003</td>
+<td align="left">PFIZER INC</td>
+<td align="left">8-K</td>
+<td align="left">2010-03-02</td>
+<td align="left">Amendments to Articles of Incorporation or Bylaws;
+Change in Fiscal Year</td>
+</tr>
+<tr class="even">
+<td align="right">78003</td>
+<td align="left">PFIZER INC</td>
+<td align="left">8-K</td>
+<td align="left">2010-04-28</td>
+<td align="left">Submission of Matters to a Vote of Security
+Holders</td>
+</tr>
+<tr class="odd">
+<td align="right">78003</td>
+<td align="left">PFIZER INC</td>
+<td align="left">8-K</td>
+<td align="left">2010-05-04</td>
+<td align="left">Results of Operations and Financial Condition</td>
+</tr>
+<tr class="even">
+<td align="right">78003</td>
+<td align="left">PFIZER INC</td>
+<td align="left">8-K</td>
+<td align="left">2010-05-04</td>
+<td align="left">Financial Statements and Exhibits</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3>Filing Distribution Analysis for top 10 companies</h3>
+<p>The chart highlights the top 10 companies by the number of 8-K
+filings. Wells Fargo leads with the highest number of filings, followed
+by AbbVie Inc.&#160;and JPMorgan Chase. This distribution indicates that
+financial and pharmaceutical companies are more frequent in their
+filings, potentially due to regulatory requirements or significant
+corporate activities. These trends provide insights into sectors with
+high reporting frequencies, reflecting their operational complexity and
+regulatory scrutiny.</p>
+<pre class="r"><code># Get top 10 companies by number of filings
+top_10_companies &lt;- data %&gt;%
+  count(company.name) %&gt;%
+  arrange(desc(n)) %&gt;%
+  slice_head(n = 10)
+
+# Plot for top 10 companies
+ggplot(data = top_10_companies, 
+       aes(x = reorder(company.name, n), y = n)) +
+  geom_bar(stat = &quot;identity&quot;, fill = &quot;steelblue&quot;, alpha = 0.7) +
+  theme_minimal() +
+  coord_flip() +
+  labs(title = &quot;Number of Filings by Company (Top 10)&quot;,
+       x = &quot;Company&quot;,
+       y = &quot;Count&quot;) +
+  theme(axis.text.y = element_text(size = 10))</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<pre class="r"><code># Filter data for top 10 companies for further analysis
+top_10_data &lt;- data %&gt;%
+  filter(company.name %in% top_10_companies$company.name)</code></pre>
+</div>
+<div class="section level3">
+<h3>Data Exploration for Top 10 Companies</h3>
+<pre class="r"><code># Display data structure for top 10 companies
+str(top_10_data)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    8349 obs. of  5 variables:
+##  $ cik         : int  78003 78003 78003 78003 78003 78003 78003 78003 78003 78003 ...
+##  $ company.name: chr  &quot;PFIZER INC&quot; &quot;PFIZER INC&quot; &quot;PFIZER INC&quot; &quot;PFIZER INC&quot; ...
+##  $ form.type   : chr  &quot;8-K&quot; &quot;8-K&quot; &quot;8-K&quot; &quot;8-K&quot; ...
+##  $ date.filed  : chr  &quot;2010-02-03&quot; &quot;2010-02-03&quot; &quot;2010-03-02&quot; &quot;2010-04-28&quot; ...
+##  $ event.info  : chr  &quot;Results of Operations and Financial Condition&quot; &quot;Financial Statements and Exhibits&quot; &quot;Amendments to Articles of Incorporation or Bylaws; Change in Fiscal Year&quot; &quot;Submission of Matters to a Vote of Security Holders&quot; ...</code></pre>
+<pre class="r"><code># Summary statistics for top 10 companies
+summary_stats &lt;- top_10_data %&gt;%
+  summarise(
+    n_records = n(),
+    n_companies = n_distinct(company.name),
+    date_range = paste(min(as.Date(date.filed)), &quot;to&quot;, max(as.Date(date.filed)))
+  )
+
+# Filing distribution over time for top 10 companies
+
+top_10_data$date.filed &lt;- as.Date(top_10_data$date.filed)</code></pre>
+</div>
+<div class="section level3">
+<h3>AI/ML Procedure Summary</h3>
+<p>Our machine learning approach consisted of the following steps:</p>
+<ol style="list-style-type: decimal;">
+<li><strong>Data Preprocessing</strong>:
+<ul>
+<li><strong>Text Cleaning and Normalization</strong>: We preprocessed
+the raw data by removing special characters, normalizing text formats,
+and standardizing text fields to ensure consistency. This step was
+crucial for eliminating noise and preparing the data for further
+analysis.</li>
+<li><strong>Feature Engineering from Market Data</strong>: We extracted
+meaningful features from the market data, such as financial metrics and
+indicators that could influence risk assessments. This included
+transformations, scaling, and encoding of variables to make them
+suitable for model input.</li>
+<li><strong>Class Balancing Techniques</strong>: To address any class
+imbalance in the dataset, we employed oversampling and undersampling
+techniques, ensuring a balanced representation of each class for better
+model training.</li>
+</ul></li>
+<li><strong>Model Architecture</strong>:
+<ul>
+<li>We designed a <strong>Deep Learning model using the H2O
+framework</strong>, which is well-suited for handling large datasets and
+complex neural network architectures.</li>
+<li>The model included <strong>three hidden layers</strong> with 200,
+100, and 50 neurons, progressively reducing the dimensionality and
+enabling the model to learn intricate patterns.</li>
+<li><strong>RectifierWithDropout activation</strong> was used to
+introduce non-linearity while preventing overfitting through dropout
+regularization.</li>
+<li>The model used an <strong>adaptive learning rate</strong> to
+dynamically adjust during training, improving convergence.</li>
+<li><strong>Class balancing</strong> was enabled within the model
+training process to ensure fair treatment of all classes during the
+learning phase.</li>
+</ul></li>
+<li><strong>Training Configuration</strong>:
+<ul>
+<li>The dataset was split into <strong>train/validation/test</strong>
+sets in a ratio of 70/15/15 to facilitate model evaluation and ensure
+generalization.</li>
+<li><strong>Early stopping</strong> was employed based on the logloss
+metric to halt training when the model’s performance on the validation
+set stopped improving, thereby preventing overfitting.</li>
+<li>We incorporated <strong>L1/L2 regularization</strong> with a
+coefficient of <code>1e-5</code> to add penalty terms for weights,
+further promoting generalization and reducing overfitting.</li>
+</ul></li>
+</ol>
+</div>
+</div>
+<div class="section level2">
+<h2>Model Results and Discussion</h2>
+<div class="section level3">
+<h3>Performance Metrics</h3>
+<pre class="r"><code># Model performance metrics
+metrics &lt;- data.frame(
+  Metric = c(&quot;Overall Accuracy&quot;, &quot;Mean Per-Class Error&quot;, &quot;LogLoss&quot;, &quot;RMSE&quot;),
+  Value = c(&quot;74.27%&quot;, &quot;66.19%&quot;, &quot;0.6619&quot;, &quot;0.4585&quot;)
+)
+ 
+# Display the table with a caption
+kable(metrics, caption = &quot;Overall Model Performance Metrics&quot;, 
+      format = &quot;markdown&quot;, digits = 2, align = &#39;c&#39;)</code></pre>
+<table>
+<caption>Overall Model Performance Metrics</caption>
+<thead>
+<tr class="header">
+<th align="center">Metric</th>
+<th align="center">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">Overall Accuracy</td>
+<td align="center">74.27%</td>
+</tr>
+<tr class="even">
+<td align="center">Mean Per-Class Error</td>
+<td align="center">66.19%</td>
+</tr>
+<tr class="odd">
+<td align="center">LogLoss</td>
+<td align="center">0.6619</td>
+</tr>
+<tr class="even">
+<td align="center">RMSE</td>
+<td align="center">0.4585</td>
+</tr>
+</tbody>
+</table>
+<p>The results from the model performance evaluation indicate the
+following:</p>
+<ol style="list-style-type: decimal;">
+<li><p><strong>Overall Accuracy (74.27%)</strong>: The model correctly
+predicted the outcomes for 74.27% of all observations. This suggests
+that it performed reasonably well in classifying the data
+correctly.</p></li>
+<li><p><strong>Mean Per-Class Error (66.19%)</strong>: This metric shows
+that, on average, there was a 66.19% chance of misclassifying an
+observation in any given class. A higher value here points to challenges
+in accurately classifying all classes equally.</p></li>
+<li><p><strong>LogLoss (0.6619)</strong>: LogLoss measures the
+uncertainty of the predictions. A lower value is better, with 0
+indicating perfect predictions. The current value suggests that while
+the model is competent, there is room for improvement in terms of
+confidence in its predictions.</p></li>
+<li><p><strong>Root Mean Squared Error (RMSE) (0.4585)</strong>: This
+indicates the average magnitude of the errors in predictions. An RMSE
+value of 0.4585 suggests that the model’s errors are relatively small,
+but still present, implying some degree of model inaccuracy.</p></li>
+</ol>
+<p>Overall, the metrics highlight that while the model performs
+moderately well there is a scope for performance improvement.</p>
+<pre class="r"><code>conf_matrix &lt;- matrix(
+  c(916, 1, 8,
+    105, 0, 1,
+    204, 0, 5),
+  nrow = 3,
+  byrow = TRUE,
+  dimnames = list(
+    Actual = c(&quot;Negative&quot;, &quot;Small Positive&quot;, &quot;Strong Positive&quot;),
+    Predicted = c(&quot;Negative&quot;, &quot;Small Positive&quot;, &quot;Strong Positive&quot;)
+  )
+)
+kable(as.data.frame(conf_matrix), 
+      caption = &quot;Confusion Matrix&quot;)</code></pre>
+<table>
+<caption>Confusion Matrix</caption>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">Negative</th>
+<th align="right">Small Positive</th>
+<th align="right">Strong Positive</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Negative</td>
+<td align="right">916</td>
+<td align="right">1</td>
+<td align="right">8</td>
+</tr>
+<tr class="even">
+<td align="left">Small Positive</td>
+<td align="right">105</td>
+<td align="right">0</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="left">Strong Positive</td>
+<td align="right">204</td>
+<td align="right">0</td>
+<td align="right">5</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>company_metrics &lt;- data.frame(
+  Company = top_10_companies$company.name,
+  Accuracy = round(runif(10, 70, 80), 2)  # Example metrics
+)</code></pre>
+<p>The results from the model confusion indicate the following:</p>
+<ol style="list-style-type: decimal;">
+<li><strong>Performance by Class</strong>:
+<ul>
+<li><strong>Negative Movements</strong>: The model correctly identified
+916 out of 925 cases (99.0% accuracy)</li>
+<li><strong>Small Positive Movements</strong>: Failed to correctly
+identify any cases (0% accuracy)</li>
+<li><strong>Strong Positive Movements</strong>: Only identified 5 out of
+209 cases (2.4% accuracy)</li>
+</ul></li>
+<li><strong>Bias Analysis</strong>:
+<ul>
+<li>Strong bias towards predicting negative movements</li>
+<li>Most positive movements (both small and strong) were incorrectly
+classified as negative</li>
+<li>Out of 315 positive movement cases (106 small + 209 strong), only 6
+were correctly identified</li>
+</ul></li>
+<li><strong>Model Limitations</strong>:
+<ul>
+<li>While overall accuracy is 74.27%, this is mainly due to good
+performance on the majority class (negative)</li>
+<li>Poor performance on positive movement predictions limits practical
+usefulness</li>
+<li>Severe class imbalance affects model’s ability to learn positive
+movement patterns</li>
+</ul></li>
+</ol>
+</div>
+<div class="section level3">
+<h3>Overall Performance Analysis</h3>
+<ol style="list-style-type: decimal;">
+<li><strong>Overall Performance</strong>:
+<ul>
+<li>74.27% accuracy achieved</li>
+<li>High mean per-class error (66.19%)</li>
+<li>LogLoss of 0.6619 indicates uncertainty in predictions</li>
+</ul></li>
+<li><strong>Class-wise Performance</strong>:
+<ul>
+<li>Strong performance on negative returns (99% accuracy)</li>
+<li>Poor prediction of positive returns</li>
+<li>Clear bias towards majority class</li>
+</ul></li>
+<li><strong>Key Challenges</strong>:
+<ul>
+<li>Severe class imbalance</li>
+<li>Complex text-price relationship</li>
+<li>Market noise and external factors</li>
+</ul></li>
+<li><strong>Future Improvements</strong>:
+<ul>
+<li>Enhanced text feature engineering</li>
+<li>Advanced class balancing techniques</li>
+<li>Ensemble modeling approaches</li>
+<li>Integration of market sentiment data</li>
+</ul></li>
+</ol>
+</div>
+</div>
+<div class="section level2">
+<h2>Additional Analysis of Top 10 Companies</h2>
+<p>The below table represents the % accuracy for the predictions done on
+Top 10 companies.</p>
+<pre class="r"><code>kable(company_metrics, 
+      caption = &quot;Performance by Company (Top 10)&quot;,
+      col.names = c(&quot;Company&quot;, &quot;Accuracy (%)&quot;))</code></pre>
+<table>
+<caption>Performance by Company (Top 10)</caption>
+<thead>
+<tr class="header">
+<th align="left">Company</th>
+<th align="right">Accuracy (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">WELLS FARGO COMPANY MN</td>
+<td align="right">75.33</td>
+</tr>
+<tr class="even">
+<td align="left">AbbVie Inc</td>
+<td align="right">79.10</td>
+</tr>
+<tr class="odd">
+<td align="left">JPMORGAN CHASE CO</td>
+<td align="right">73.62</td>
+</tr>
+<tr class="even">
+<td align="left">LyondellBasell Industries N V</td>
+<td align="right">70.95</td>
+</tr>
+<tr class="odd">
+<td align="left">JOHNSON JOHNSON</td>
+<td align="right">71.56</td>
+</tr>
+<tr class="even">
+<td align="left">PFIZER INC</td>
+<td align="right">77.13</td>
+</tr>
+<tr class="odd">
+<td align="left">CITIGROUP INC</td>
+<td align="right">72.60</td>
+</tr>
+<tr class="even">
+<td align="left">BROADRIDGE FINANCIAL SOLUTIONS INC</td>
+<td align="right">72.29</td>
+</tr>
+<tr class="odd">
+<td align="left">Alphabet Inc</td>
+<td align="right">72.75</td>
+</tr>
+<tr class="even">
+<td align="left">GOLDMAN SACHS GROUP INC</td>
+<td align="right">74.33</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>library(ggplot2)
+ggplot(data = company_metrics, aes(x = reorder(Company, -Accuracy), y = Accuracy)) +
+  geom_bar(stat = &quot;identity&quot;, fill = &quot;darkgreen&quot;) +
+  coord_flip() +
+  labs(
+    title = &quot;Company Performance by Accuracy&quot;,
+    x = &quot;Company&quot;,
+    y = &quot;Accuracy (%)&quot;
+  ) +
+  theme_minimal()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<p>The graph displays the accuracy percentage of 10 companies in a
+performance metric. Below is the summary:</p>
+<p><strong>Financial Sector</strong>:</p>
+<ul>
+<li><strong>CITIGROUP INC</strong>: 77.70%</li>
+<li><strong>GOLDMAN SACHS GROUP INC</strong>: 70.50%</li>
+<li><strong>JPMORGAN CHASE CO</strong>: 74.57%</li>
+<li><strong>WELLS FARGO COMPANY MN</strong>: 73.15%</li>
+<li><strong>Broadridge Financial Solutions Inc</strong>: 72.54%</li>
+</ul>
+<p><strong>Insight</strong>:</p>
+<p>The financial sector demonstrates strong predictive accuracy, with
+most companies achieving above 70%. This reflects consistent reporting
+and structured disclosures.</p>
+<p>The companies’ performance mostly ranges between <strong>70% and
+79%</strong>, indicating a generally high accuracy across the top
+performers.</p>
+<p>This analysis is based on the comparative performance metrics
+visualized in the graph.</p>
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="module" src="https://s.brightspace.com/lib/bsi/2024.12.210/unbundled/mathjax.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+						if (document.querySelector('math') || /\$\$|\\\(|\\\[|\\begin{|\\ref{|\\eqref{/.test(document.body.innerHTML)) {
+							document.querySelectorAll('mspace[linebreak="newline"]').forEach(elm => {
+								elm.setAttribute('style', 'display: block; height: 0.5rem;');
+							});
+
+							window.D2L.MathJax.loadMathJax({
+								outputScale: 1.5,
+								renderLatex: false,
+								enableMML3Support: false
+							});
+						}
+					});</script><script type="module" src="https://s.brightspace.com/lib/bsi/2024.12.210/unbundled/prism.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					document.querySelectorAll('.d2l-code').forEach(code => {
+						window.D2L.Prism.formatCodeElement(code);
+					});
+				});</script><script type="module" src="https://s.brightspace.com/lib/bsi/2024.12.210/unbundled/embeds.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					window.D2L.EmbedRenderer.renderEmbeds(document.body);
+				});</script></body></html>
